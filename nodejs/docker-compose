@@ -1,0 +1,44 @@
+# Docker-compose file for nodejs appplication with Postgres database.
+
+# The volumes contain both folders for the database files and initial script.
+version: '2.1'
+services:
+  postgresdb:
+    image: postgres:10
+    restart: always
+    volumes:
+      - ./docker/postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d/
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - mynetwork
+
+  # Links and depends_on properties determine the dependency between the database and application. That means the application will be started only after the database
+  nodejs:
+    # Defines the location of Dockerfile
+    build: .
+    # Defines the main point of execution when the container starts.
+    command: npm run dev-docker
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    ports:
+       - "4001:4000"
+    links:
+      - postgresdb
+    networks:
+      - mynetwork
+
+volumes:
+  postgres-data: 
+  postgres-init:
+
+networks:
+  mynetwork:
+    driver: bridge
